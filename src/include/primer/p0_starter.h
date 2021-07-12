@@ -24,7 +24,7 @@ template <typename T>
 class Matrix {
  protected:
   // TODO(P0): Add implementation
-  Matrix(int r, int c) : rows(r), cols(c) { this->linear = new T[r * c]; }
+  Matrix(int r, int c) : rows(r), cols(c) { this->linear = new T[r * c]{}; }
 
   // # of rows in the matrix
   int rows;
@@ -143,13 +143,17 @@ class RowMatrixOperations {
     int mat1_cols = mat1->GetColumns();
     int mat2_cols = mat2->GetColumns();
     std::unique_ptr<RowMatrix<T>> ret(new RowMatrix<T>(mat1_rows, mat2_cols));
-    for (int row = 0; row < mat1_rows; row++) {
-      for (int col = 0; col < mat2_cols; col++) {
-        T val{};
-        for (int i = 0; i < mat1_cols; i++) {
-          val += mat1->GetElem(row, i) * mat2->GetElem(i, col);
+    /* for an matrix multiplication, c[i][j] = SUM(a[i][k] * b[k][j]),
+     * where k is in range [0, mat1_cols), therefore
+     * c[i][j] += a[i][k] * b[k][j]
+     */
+    for (int i = 0; i < mat1_rows; i++) {
+      for (int k = 0; k < mat1_cols; k++) {
+        for (int j = 0; j < mat2_cols; j++) {
+          T val = ret->GetElem(i, j);
+          val += mat1->GetElem(i, k) * mat2->GetElem(k, j);
+          ret->SetElem(i, j, val);
         }
-        ret->SetElem(row, col, val);
       }
     }
     return ret;
