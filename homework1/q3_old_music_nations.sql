@@ -2,8 +2,8 @@
 -- along with the number of associated artists. artist.area - area.id
 
 SELECT area.name, COUNT(artist.id) AS cnt
-FROM artist INNER JOIN area
-ON artist.area = area.id
+FROM artist
+INNER JOIN area ON artist.area = area.id
 WHERE artist.begin_date_year < 1850
 GROUP BY artist.area
 ORDER BY cnt DESC

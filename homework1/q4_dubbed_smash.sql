@@ -7,10 +7,10 @@
 -- 2. who's from the United Kingdom and started after 1950 (not included)
 
 SELECT artist.name, COUNT(artist_alias.id) AS cnt
-FROM artist INNER JOIN artist_alias
-ON artist.id = artist_alias.artist
-WHERE artist.begin_date_year < 1950
-AND artist.area IN (SELECT id FROM area WHERE name = 'United Kingdom')
+FROM artist
+INNER JOIN artist_alias ON artist.id = artist_alias.artist
+WHERE artist.begin_date_year > 1950
+AND artist.area = (SELECT id FROM area WHERE name = 'United Kingdom')
 GROUP BY artist.id
 ORDER BY cnt DESC
 LIMIT 10;

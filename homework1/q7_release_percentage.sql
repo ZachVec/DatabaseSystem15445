@@ -10,7 +10,7 @@ WITH past_year_release(year, month, cnt) AS (
     FROM   release_info
     WHERE (date_year = 2019 AND date_month >= 7)
     OR    (date_year = 2020 AND date_month <= 7)
-    GROUP BY date_year * 100 + date_month
+    GROUP BY date_year, date_month
 )
 SELECT CAST(year AS VARCHAR) || '.' || (
     CASE
