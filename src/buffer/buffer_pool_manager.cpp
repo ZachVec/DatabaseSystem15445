@@ -52,26 +52,20 @@ Page *BufferPoolManager::FetchPageImpl(page_id_t page_id) {
   }
 
   frame_id_t frame_id;
-  if (!free_list_.empty()) {
-    frame_id = free_list_.back();
-    free_list_.pop_back();
-  } else if (!replacer_->Victim(&frame_id)) {
+  if (!FetchFrameId(&frame_id)) {
     return nullptr;
   }
 
   Page &page = pages_[frame_id];
-  if (page.IsDirty()) {
-    disk_manager_->WritePage(page.GetPageId(), page.GetData());
-  }
-
-  page_table_.erase(page.GetPageId());
-  page_table_[page_id] = frame_id;
-
+  WritePage(page.IsDirty(), page.GetPageId(), page.GetData());
   // metadata: data, page_id, pin_count, is_dirty
   page.page_id_ = page_id;
   page.pin_count_ = 1;
   page.is_dirty_ = false;
-  disk_manager_->ReadPage(page_id, page.data_);
+  disk_manager_->ReadPage(page.GetPageId(), page.GetData());
+
+  // update page table
+  page_table_[page_id] = frame_id;
   return &page;
 }
 
@@ -102,9 +96,7 @@ bool BufferPoolManager::FlushPageImpl(page_id_t page_id) {
   }
 
   Page &page = pages_[it->second];
-  if (page.IsDirty()) {
-    disk_manager_->WritePage(page.GetPageId(), page.GetData());
-  }
+  WritePage(page.IsDirty(), page.GetPageId(), page.GetData());
   return true;
 }
 
@@ -117,25 +109,19 @@ Page *BufferPoolManager::NewPageImpl(page_id_t *page_id) {
   std::scoped_lock<std::mutex> lock(latch_);
 
   frame_id_t frame_id;
-  if (!free_list_.empty()) {
-    frame_id = free_list_.back();
-    free_list_.pop_back();
-  } else if (!replacer_->Victim(&frame_id)) {
+  if (!FetchFrameId(&frame_id)) {
     return nullptr;
   }
 
   Page &page = pages_[frame_id];
-  page_table_.erase(page.GetPageId());
-  // ?
-  if (page.IsDirty()) {
-    disk_manager_->WritePage(page.GetPageId(), page.GetData());
-  }
-
-  // metadata: data, page_id_, pin_count_, is_dirty_
+  WritePage(page.IsDirty(), page.GetPageId(), page.GetData());
+  // metadata: data, page_id, pin_count, is_dirty
   *page_id = page.page_id_ = disk_manager_->AllocatePage();
   page.pin_count_ = 1;
   page.is_dirty_ = false;
   page.ResetMemory();
+
+  // update page table
   page_table_[page.GetPageId()] = frame_id;
   return &page;
 }
@@ -158,14 +144,12 @@ bool BufferPoolManager::DeletePageImpl(page_id_t page_id) {
   }
 
   page_table_.erase(page.GetPageId());
-  if (page.IsDirty()) {
-    disk_manager_->WritePage(page.GetPageId(), page.GetData());
-  }
+  WritePage(page.IsDirty(), page.GetPageId(), page.GetData());
 
-  replacer_->Pin(it->second);
   page.page_id_ = INVALID_PAGE_ID;
   page.pin_count_ = 0;
   page.is_dirty_ = false;
+  replacer_->Pin(it->second);
   free_list_.emplace_back(it->second);
   disk_manager_->DeallocatePage(page_id);
   return true;
@@ -175,10 +159,30 @@ void BufferPoolManager::FlushAllPagesImpl() {
   std::scoped_lock<std::mutex> lock(latch_);
   for (const auto &kv : page_table_) {
     Page &page = pages_[kv.second];
-    if (page.IsDirty()) {
-      disk_manager_->WritePage(page.GetPageId(), page.GetData());
-    }
+    WritePage(page.IsDirty(), page.GetPageId(), page.GetData());
   }
+}
+
+void BufferPoolManager::WritePage(bool dirty, page_id_t page_id, const char *data) {
+  if (dirty) {
+    disk_manager_->WritePage(page_id, data);
+  }
+}
+
+bool BufferPoolManager::FetchFrameId(frame_id_t *frame_id) {
+  if (!free_list_.empty()) {
+    *frame_id = free_list_.back();
+    free_list_.pop_back();
+    return true;
+  }
+
+  if (replacer_->Victim(frame_id)) {
+    Page &page = pages_[*frame_id];
+    page_table_.erase(page.GetPageId());
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace bustub

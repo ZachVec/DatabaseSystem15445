@@ -168,5 +168,8 @@ class BufferPoolManager {
   std::list<frame_id_t> free_list_;
   /** This latch protects pages_, free_list_ and page_table_ */
   std::mutex latch_;
+
+  void WritePage(bool dirty, page_id_t page_id, const char *data);
+  bool FetchFrameId(frame_id_t *frame_id);
 };
 }  // namespace bustub
