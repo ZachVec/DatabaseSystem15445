@@ -46,7 +46,7 @@ LRUReplacer::~LRUReplacer() {
  * @return false otherwise.
  */
 bool LRUReplacer::Victim(frame_id_t *frame_id) {
-  std::scoped_lock lock(this->latch);
+  std::scoped_lock<std::mutex> lock(this->latch);
   if (mps.empty()) {
     frame_id = nullptr;
     return false;
@@ -64,7 +64,7 @@ bool LRUReplacer::Victim(frame_id_t *frame_id) {
  * @param frame_id id of the pinned page
  */
 void LRUReplacer::Pin(frame_id_t frame_id) {
-  std::scoped_lock lock(this->latch);
+  std::scoped_lock<std::mutex> lock(this->latch);
   auto it = this->mps.find(frame_id);
   if (it != this->mps.end()) {
     rmNode(it->second);
@@ -79,7 +79,7 @@ void LRUReplacer::Pin(frame_id_t frame_id) {
  * @param frame_id id of the unpinned page
  */
 void LRUReplacer::Unpin(frame_id_t frame_id) {
-  std::scoped_lock lock(this->latch);
+  std::scoped_lock<std::mutex> lock(this->latch);
   if (mps.size() >= this->capcity || mps.find(frame_id) != mps.end()) {
     return;
   }
@@ -91,7 +91,10 @@ void LRUReplacer::Unpin(frame_id_t frame_id) {
  *
  * @return size_t # of frames that are currently in the LRUReplacer
  */
-size_t LRUReplacer::Size() { return mps.size(); }
+size_t LRUReplacer::Size() {
+  std::scoped_lock<std::mutex> lock(this->latch);
+  return mps.size();
+}
 
 frame_id_t LRUReplacer::rmNode(pNode node) {
   frame_id_t frame_id = node->frame_id;
