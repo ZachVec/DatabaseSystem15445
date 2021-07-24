@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+print_help() {
+    echo -e "Usage:\n"
+    echo -e "  $ archive_submission proj#\n"
+    echo -e "Example:\n"
+    echo -e "  $ archive_submission 0\n"
+    echo -e "This will archive project 0. Choices:\n"
+    echo -e "  0 - C++ Primer"
+    echo -e "  1 - Buffer Pool Manager"
+    echo -e "  2 - B+ Tree Index Checkpoint 1"
+    echo -e "  3 - B+ Tree Index Checkpoint 2"
+    echo -e "  4 - Query Execution"
+    echo -e "  5 - Concurrency Control"
+}
+
+min_proj=0
+max_proj=1
+
+if [[ $# -ne 1 || $1 -lt min_proj || $1 -gt max_proj ]]; then
+    print_help
+    exit 0
+fi
+
+output="proj$1"
+echo "Start packing..."
+if [[ $1 -eq 0 ]]; then
+    zip $output src/ src/include/ src/include/primer src/include/primer/p0_starter.h
+else # elif [[ $1 -eq 1 ]]; then
+    zip $output src/
+    zip -u proj1 src/include/ src/include/buffer/ src/include/buffer/{lru_replacer.h,buffer_pool_manager.h}
+    zip -u proj1 src/buffer/ src/buffer/{lru_replacer.cpp,buffer_pool_manager.cpp}
+fi
+echo "Finish packing! Directory structure:"
+unzip -l $output.zip
+
