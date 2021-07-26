@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+
+print_help() {
+    echo -e "Usage:\n"
+    echo -e "  $ archive_submission proj#\n"
+    echo -e "Example:\n"
+    echo -e "  $ archive_submission 0\n"
+    echo -e "This will archive project 0. Choices:\n"
+    echo -e "  0 - C++ Primer"
+    echo -e "  1 - Buffer Pool Manager"
+    echo -e "  2 - B+ Tree Index"
+    echo -e "  3 - Query Execution"
+    echo -e "  4 - Concurrency Control"
+}
+
+min_proj=0
+max_proj=4
+
+if [[ $# -ne 1 || $1 -lt min_proj || $1 -gt max_proj ]]; then
+    print_help
+    exit 0
+fi
+
+out="proj$1-submission"
+
+if [[ -f ./$out.zip ]]; then
+    rm $out.zip
+fi
+
+echo "Start packing $out.zip..."
+if [[ $1 -eq 0 ]]; then
+    zip $out -r src/include/primer/p0_starter.h
+fi
+
+if [[ $1 -ge 1 ]]; then
+    echo "zip project 1..."
+    zip $out -r \
+    src/include/buffer/lru_replacer.h \
+    src/buffer/lru_replacer.cpp \
+    src/include/buffer/buffer_pool_manager.h \
+    src/buffer/buffer_pool_manager.cpp
+fi
+
+if [[ $1 -ge 2 ]]; then
+    echo "zip project 2..."
+    zip $out -ur \
+    src/include/storage/page/b_plus_tree_page.h \
+    src/storage/page/b_plus_tree_page.cpp \
+    src/include/storage/page/b_plus_tree_internal_page.h \
+    src/storage/page/b_plus_tree_internal_page.cpp \
+    src/include/storage/page/b_plus_tree_leaf_page.h \
+    src/storage/page/b_plus_tree_leaf_page.cpp \
+    src/include/storage/index/b_plus_tree.h \
+    src/storage/index/b_plus_tree.cpp \
+    src/include/storage/index/index_iterator.h \
+    src/storage/index/index_iterator.cpp
+fi
+
+if [[ $1 -ge 3 ]]; then
+    echo "zip project 3..."
+    zip $out -ur \
+    src/include/catalog/catalog.h \
+    src/include/execution/execution_engine.h \
+    src/include/execution/executor_factory.h \
+    src/include/execution/executors/seq_scan_executor.h \
+    src/include/execution/executors/index_scan_executor.h \
+    src/include/execution/executors/insert_executor.h \
+    src/include/execution/executors/update_executor.h \
+    src/include/execution/executors/delete_executor.h \
+    src/include/execution/executors/nested_loop_join_executor.h \
+    src/include/execution/executors/nested_index_join_executor.h \
+    src/include/execution/executors/limit_executor.h \
+    src/include/execution/executors/aggregation_executor.h \
+    src/include/storage/index/b_plus_tree_index.h \
+    src/include/storage/index/index.h \
+    src/execution/executor_factory.cpp \
+    src/execution/seq_scan_executor.cpp \
+    src/execution/index_scan_executor.cpp \
+    src/execution/insert_executor.cpp \
+    src/execution/update_executor.cpp \
+    src/execution/delete_executor.cpp \
+    src/execution/nested_loop_join_executor.cpp \
+    src/execution/nested_index_join_executor.cpp \
+    src/execution/limit_executor.cpp \
+    src/execution/aggregation_executor.cpp \
+    src/storage/index/b_plus_tree_index.cpp
+fi
+
+if [[ $1 -ge 4 ]]; then
+    echo "zip project 4..."
+    zip $out -ur \
+    src/concurrency/lock_manager.cpp \
+    src/include/concurrency/lock_manager.h
+fi
+unzip -l $out.zip
