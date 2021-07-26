@@ -72,14 +72,11 @@ Page *BufferPoolManager::FetchPageImpl(page_id_t page_id) {
 bool BufferPoolManager::UnpinPageImpl(page_id_t page_id, bool is_dirty) {
   std::scoped_lock<std::mutex> lock(latch_);
   auto it = page_table_.find(page_id);
-  if (it == page_table_.end()) {
+  if (it == page_table_.end() || pages_[it->second].GetPinCount() <= 0) {
     return false;
   }
   Page &page = pages_[it->second];
   page.is_dirty_ = page.is_dirty_ || is_dirty;
-  if (page.GetPinCount() <= 0) {
-    return false;
-  }
 
   --page.pin_count_;
   if (page.pin_count_ == 0) {

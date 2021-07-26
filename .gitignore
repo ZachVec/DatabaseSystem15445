@@ -263,3 +263,6 @@ docs/dev
 
 # databse used in homework
 *.db
+
+# submissions
+*.zip
