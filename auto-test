@@ -3,70 +3,91 @@
 set -e
 cd build
 
-project=6
-format=0
-help() {
-  echo "hello world"
-}
-
+format=false
 while [[ $# -gt 0 ]]; do
   case $1 in
     -p|--project)
       project=$2
+      shift
+      shift
       ;;
     -f|--format)
-      format=$2
+      format=true
+      shift
       ;;
   esac
-  shift
-  shift
 done
 
-if [[ $format -ne 0 ]]; then
-  echo "$ make format"
-  make format
-  echo "$ make check-lint"
-  make check-lint
-  echo "$ make check-clang-tidy"
-  make check-clang-tidy
+function run() { echo "\$ $@"; $@; }
+
+if [[ $format = true ]]; then
+  run make format
+  run make check-lint
+  run make check-clang-tidy
 fi
 
-if [[ $project -lt 0 || $project -gt 5 ]]; then
-  help
-elif [[ $project -eq 0 ]]; then
-  make starter_test
-  ./test/starter_test
-elif [[ $project -eq 1 ]]; then
-  make grading_clock_replacer_test
-  make grading_buffer_pool_manager_test
-  make grading_buffer_pool_manager_concurrency_test
-  ./test/grading_clock_replacer_test
-  ./test/grading_buffer_pool_manager_test
-  ./test/grading_buffer_pool_manager_concurrency_test
-elif [[ $project -eq 2 ]]; then
-  make grading_b_plus_tree_checkpoint_1_test
-  ./test/grading_b_plus_tree_checkpoint_1_test
-elif [[ $project -eq 3 ]]; then
-  make grading_b_plus_tree_checkpoint_2_concurrent_test
-  make grading_b_plus_tree_checkpoint_2_sequential_test
-  ./test/grading_b_plus_tree_checkpoint_2_concurrent_test
-  ./test/grading_b_plus_tree_checkpoint_2_sequential_test
-elif [[ $project -eq 4 ]]; then
-  make grading_catalog_test
-  make grading_executor_test
-  ./test/grading_catalog_test
-  ./test/grading_executor_test
-elif [[ $project -eq 5]]; then
-  make rollback_test
-  make grading_transaction_test
-  make grading_lock_manager_detection_test
-  make grading_lock_manager_test_1
-  make grading_lock_manager_test_2
-  make grading_lock_manager_test_3
-  ./test/rollback_test
-  ./test/grading_transaction_test
-  ./test/grading_lock_manager_detection_test
-  ./test/grading_lock_manager_test_1
-  ./test/grading_lock_manager_test_2
-  ./test/grading_lock_manager_test_3
-fi
+case $project in
+  5)
+    run make rollback_test
+    run make grading_transaction_test
+    run make grading_lock_manager_detection_test
+    run make grading_lock_manager_test_1
+    run make grading_lock_manager_test_2
+    run make grading_lock_manager_test_3
+    run ./test/rollback_test
+    run ./test/grading_transaction_test
+    run ./test/grading_lock_manager_detection_test
+    run ./test/grading_lock_manager_test_1
+    run ./test/grading_lock_manager_test_2
+    run ./test/grading_lock_manager_test_3
+  ;&
+  4)
+    run make grading_catalog_test
+    run make grading_executor_test
+    run ./test/grading_catalog_test
+    run ./test/grading_executor_test
+  ;&
+  3)
+    run make grading_b_plus_tree_checkpoint_2_concurrent_test
+    run make grading_b_plus_tree_checkpoint_2_sequential_test
+    run ./test/grading_b_plus_tree_checkpoint_2_concurrent_test
+    run ./test/grading_b_plus_tree_checkpoint_2_sequential_test
+  ;&
+  2)
+    run make grading_b_plus_tree_checkpoint_1_test
+    run ./test/grading_b_plus_tree_checkpoint_1_test
+  ;&
+  1)  
+    run make lru_replacer_test
+    run make grading_buffer_pool_manager_test
+    run make grading_buffer_pool_manager_concurrency_test
+    run make grading_leaderboard_test
+    run ./test/lru_replacer_test
+    run ./test/grading_buffer_pool_manager_test
+    run ./test/grading_buffer_pool_manager_concurrency_test
+    run ./test/grading_leaderboard_test
+  ;;
+  0)
+    run make starter_test
+    run ./test/starter_test
+  ;;
+  *)
+    echo "Please input correct project number."
+    echo "SYNOPSIS"
+    echo "  ./auto-test [-p proj#] [-f]"
+    echo ""
+    echo "DESCRIPTION: automate test projects"
+    echo "  -f, --format"
+    echo "      run formats auto-correction and check before testing"
+    echo ""
+    echo "  -p proj#, --project proj#"
+    echo "      test project proj#. Project numbers:"
+    echo "        0 - Project#0 C++ Primer"
+    echo "        1 - Project#1 Buffer Pool Manager"
+    echo "        2 - Project#2 Checkpoint 1"
+    echo "        3 - Project#2 Checkpoint 2"
+    echo "        4 - Project#3 QueryExecution"
+    echo "        5 - Project#4 Concurrency Control"
+    exit 1
+  ;;
+esac
