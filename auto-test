@@ -15,6 +15,10 @@ while [[ $# -gt 0 ]]; do
       format=true
       shift
       ;;
+    *)
+      echo "Unknow parameter: $1"
+      shift
+      ;;
   esac
 done
 
@@ -31,15 +35,15 @@ case $project in
     run make rollback_test
     run make grading_transaction_test
     run make grading_lock_manager_detection_test
-    run make grading_lock_manager_test_1
-    run make grading_lock_manager_test_2
-    run make grading_lock_manager_test_3
+    run make grading_lock_manager_1_test
+    run make grading_lock_manager_2_test
+    run make grading_lock_manager_3_test
     run ./test/rollback_test
     run ./test/grading_transaction_test
     run ./test/grading_lock_manager_detection_test
-    run ./test/grading_lock_manager_test_1
-    run ./test/grading_lock_manager_test_2
-    run ./test/grading_lock_manager_test_3
+    run ./test/grading_lock_manager_1_test
+    run ./test/grading_lock_manager_2_test
+    run ./test/grading_lock_manager_3_test
   ;&
   4)
     run make grading_catalog_test
@@ -48,10 +52,10 @@ case $project in
     run ./test/grading_executor_test
   ;&
   3)
-    run make grading_b_plus_tree_checkpoint_2_concurrent_test
     run make grading_b_plus_tree_checkpoint_2_sequential_test
-    run ./test/grading_b_plus_tree_checkpoint_2_concurrent_test
+    run make grading_b_plus_tree_checkpoint_2_concurrent_test
     run ./test/grading_b_plus_tree_checkpoint_2_sequential_test
+    run ./test/grading_b_plus_tree_checkpoint_2_concurrent_test
   ;&
   2)
     run make grading_b_plus_tree_checkpoint_1_test
@@ -61,11 +65,11 @@ case $project in
     run make lru_replacer_test
     run make grading_buffer_pool_manager_test
     run make grading_buffer_pool_manager_concurrency_test
-    run make grading_leaderboard_test
+    # run make grading_leaderboard_test
     run ./test/lru_replacer_test
     run ./test/grading_buffer_pool_manager_test
     run ./test/grading_buffer_pool_manager_concurrency_test
-    run ./test/grading_leaderboard_test
+    # run ./test/grading_leaderboard_test
   ;;
   0)
     run make starter_test
@@ -76,9 +80,9 @@ case $project in
     echo "SYNOPSIS"
     echo "  ./auto-test [-p proj#] [-f]"
     echo ""
-    echo "DESCRIPTION: automate test projects"
+    echo "DESCRIPTION: run tests automatically"
     echo "  -f, --format"
-    echo "      run formats auto-correction and check before testing"
+    echo "      run format auto-correction and check before testing"
     echo ""
     echo "  -p proj#, --project proj#"
     echo "      test project proj#. Project numbers:"
@@ -88,6 +92,5 @@ case $project in
     echo "        3 - Project#2 Checkpoint 2"
     echo "        4 - Project#3 QueryExecution"
     echo "        5 - Project#4 Concurrency Control"
-    exit 1
   ;;
 esac

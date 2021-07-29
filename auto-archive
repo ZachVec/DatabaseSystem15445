@@ -2,9 +2,9 @@
 
 print_help() {
     echo -e "Usage:\n"
-    echo -e "  $ archive_submission proj#\n"
+    echo -e "  $ ./auto-archive proj#\n"
     echo -e "Example:\n"
-    echo -e "  $ archive_submission 0\n"
+    echo -e "  $ ./auto-archive 0\n"
     echo -e "This will archive project 0. Choices:\n"
     echo -e "  0 - C++ Primer"
     echo -e "  1 - Buffer Pool Manager"
