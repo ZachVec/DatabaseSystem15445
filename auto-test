@@ -54,8 +54,12 @@ case $project in
   3)
     run make grading_b_plus_tree_checkpoint_2_sequential_test
     run make grading_b_plus_tree_checkpoint_2_concurrent_test
+    run make grading_b_plus_tree_memory_test
+    run make grading_b_plus_tree_bench_test
     run ./test/grading_b_plus_tree_checkpoint_2_sequential_test
     run ./test/grading_b_plus_tree_checkpoint_2_concurrent_test
+    run ./test/grading_b_plus_tree_memory_test
+    run ./test/grading_b_plus_tree_bench_test
   ;&
   2)
     run make grading_b_plus_tree_checkpoint_1_test

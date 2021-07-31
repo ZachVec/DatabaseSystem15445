@@ -20,7 +20,7 @@
 
 namespace bustub {
 
-TEST(LeaderboardTest, Time) {
+TEST(LeaderboardTest, DISABLED_Time) {
   DiskManagerMemory *dm = new DiskManagerMemory();
   BufferPoolManager *bpm = new BufferPoolManager(1000000, dm);
   page_id_t temp;
