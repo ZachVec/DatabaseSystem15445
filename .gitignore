@@ -266,3 +266,6 @@ docs/dev
 
 # submissions
 *.zip
+
+# homework
+!hw*.pdf
