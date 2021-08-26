@@ -19,37 +19,6 @@
 #include "storage/index/generic_key.h"
 
 namespace bustub {
-class ScopedPage {
- public:
-  ScopedPage(page_id_t page_id, BufferPoolManager *bpm) : page_id_(page_id), bpm_(bpm) {
-    page_ = bpm->FetchPage(page_id);
-  }
-  ScopedPage(Page *page, BufferPoolManager *bpm) : page_id_(page->GetPageId()), bpm_(bpm) { page_ = page; }
-  void SetDirty() { is_dirty_ = true; }
-  void SetDelete() { is_delete_ = true; }
-  Page *GetPage() { return page_; }
-  void UnpinAndPin(page_id_t page_id) {
-    bpm_->UnpinPage(page_id_, is_dirty_);
-    if (is_delete_) {
-      assert(bpm_->DeletePage(page_id_));
-    }
-    is_dirty_ = is_delete_ = false;
-    page_ = bpm_->FetchPage(page_id_ = page_id);
-  }
-  ~ScopedPage() {
-    bpm_->UnpinPage(page_id_, is_dirty_);
-    if (is_delete_) {
-      assert(bpm_->DeletePage(page_id_));
-    }
-  }
-
- private:
-  Page *page_ = nullptr;
-  page_id_t page_id_;
-  BufferPoolManager *bpm_;
-  bool is_dirty_ = false;
-  bool is_delete_ = false;
-};
 
 #define MappingType std::pair<KeyType, ValueType>
 
