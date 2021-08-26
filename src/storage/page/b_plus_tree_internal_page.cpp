@@ -159,10 +159,10 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyNFrom(MappingType *items, int size, Buf
   int index = GetSize();
   page_id_t parent_id = GetPageId();
   for (int i = 0; i < size; ++i) {
-    Page *page = buffer_pool_manager->FetchPage(items[i].second);
-    BPlusTreePage *child_page = reinterpret_cast<BPlusTreePage *>(page->GetData());
+    ScopedPage page(items[i].second, buffer_pool_manager);
+    BPlusTreePage *child_page = reinterpret_cast<BPlusTreePage *>(page.GetPage()->GetData());
     child_page->SetParentPageId(parent_id);
-    buffer_pool_manager->UnpinPage(page->GetPageId(), true);
+    page.SetDirty();
     array[index++] = std::move(items[i]);
   }
   IncreaseSize(size);
@@ -225,10 +225,10 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveFirstToEndOf(BPlusTreeInternalPage *rec
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyLastFrom(const MappingType &pair, BufferPoolManager *buffer_pool_manager) {
   // Adopt pair
-  Page *page = buffer_pool_manager->FetchPage(pair.second);
-  BPlusTreePage *node = reinterpret_cast<BPlusTreePage *>(page->GetData());
+  ScopedPage page(pair.second, buffer_pool_manager);
+  BPlusTreePage *node = reinterpret_cast<BPlusTreePage *>(page.GetPage()->GetData());
   node->SetParentPageId(GetPageId());
-  buffer_pool_manager->UnpinPage(page->GetPageId(), true);
+  page.SetDirty();
   // Insert Pair
   array[GetSize()] = std::move(pair);
   IncreaseSize(1);
