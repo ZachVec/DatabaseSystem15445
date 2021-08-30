@@ -22,7 +22,7 @@ namespace bustub {
 INDEX_TEMPLATE_ARGUMENTS
 class IndexIterator {
  public:
-  IndexIterator(B_PLUS_TREE_LEAF_PAGE_TYPE *leaf, int index, BufferPoolManager *bpm);
+  IndexIterator(Page *page, int index, BufferPoolManager *bpm);
   IndexIterator();
   ~IndexIterator();
 
@@ -37,6 +37,7 @@ class IndexIterator {
   bool operator!=(const IndexIterator &itr) const { return !this->operator==(itr); }
 
  private:
+  Page *page_;
   B_PLUS_TREE_LEAF_PAGE_TYPE *leaf_;
   int index_;
   BufferPoolManager *bpm_;

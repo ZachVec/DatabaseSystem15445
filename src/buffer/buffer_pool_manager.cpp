@@ -173,24 +173,21 @@ bool BufferPoolManager::DeletePageImpl(page_id_t page_id) {
   // 2.   If P exists, but has a non-zero pin-count, return false. Someone is using the page.
   // 3.   Otherwise, P can be deleted. Remove P from the page table, reset its metadata and return it to the free list.
   std::scoped_lock<std::mutex> latch(latch_);
+  disk_manager_->DeallocatePage(page_id);
   auto it = page_table_.find(page_id);
-  if (it != page_table_.end()) {
-    Page &page = pages_[it->second];
-    if (page.GetPinCount() > 0) {
-      return false;
-    }
-    if (page.IsDirty()) {
-      disk_manager_->WritePage(page.GetPageId(), page.GetData());
-    }
-    replacer_->Pin(it->second);
-    free_list_.push_back(it->second);
-    disk_manager_->DeallocatePage(page.GetPageId());
-    page.page_id_ = INVALID_PAGE_ID;
-    page.pin_count_ = 0;
-    page.is_dirty_ = false;
-    page_table_.erase(page_id);
+  if (it == page_table_.end()) {
     return true;
   }
+  Page &page = pages_[it->second];
+  if (page.GetPinCount() != 0) {
+    return false;
+  }
+  replacer_->Pin(it->second);
+  free_list_.push_back(it->second);
+  page.page_id_ = INVALID_PAGE_ID;
+  page.pin_count_ = 0;
+  page.is_dirty_ = false;
+  page_table_.erase(page_id);
   return true;
 }
 

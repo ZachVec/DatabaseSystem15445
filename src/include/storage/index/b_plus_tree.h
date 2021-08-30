@@ -109,6 +109,14 @@ class BPlusTree {
 
   void ToString(BPlusTreePage *page, BufferPoolManager *bpm) const;
 
+  /* Concurrent Access Helper Functions */
+  Page *FindLeafPageWLatch(const KeyType &key, Transaction *transaction, Operation operation);
+  Page *FetchPageAndWLatch(const page_id_t &page_id);
+  Page *FetchPageAndRLatch(const page_id_t &page_id);
+  void WUnlatchAndUnpin(Transaction *transaction, bool is_dirty);  // For WLatched pages.
+  void RUnlatchAndUnpin(Page *page);                               // For RLatched pages.
+  void DeletePages(Transaction *transaction);
+
   // member variable
   std::string index_name_;
   page_id_t root_page_id_;
@@ -116,6 +124,7 @@ class BPlusTree {
   KeyComparator comparator_;
   int leaf_max_size_;
   int internal_max_size_;
+  std::mutex root_latch_;
 };
 
 }  // namespace bustub

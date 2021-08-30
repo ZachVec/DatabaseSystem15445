@@ -220,7 +220,7 @@ void BPlusTreeBenchmarkCall() {
  * each key twice using GetValue and iterator
  *
  */
-TEST(BPlusTreeTest, DISABLED_BPlusTreeBenchmark) {
+TEST(BPlusTreeTest, BPlusTreeBenchmark) {
   TEST_TIMEOUT_BEGIN
   BPlusTreeBenchmarkCall();
   remove("test.db");

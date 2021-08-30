@@ -24,6 +24,7 @@ namespace bustub {
 
 #define INDEX_TEMPLATE_ARGUMENTS template <typename KeyType, typename ValueType, typename KeyComparator>
 
+enum class Operation { INSERT = 0, REMOVE };
 // define page type enum
 enum class IndexPageType { INVALID_INDEX_PAGE = 0, LEAF_PAGE, INTERNAL_PAGE };
 
@@ -44,6 +45,7 @@ class BPlusTreePage {
  public:
   bool IsLeafPage() const;
   bool IsRootPage() const;
+  bool IsSafe(Operation operation) const;
   void SetPageType(IndexPageType page_type);
 
   int GetSize() const;
