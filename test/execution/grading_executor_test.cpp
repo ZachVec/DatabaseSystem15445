@@ -165,7 +165,7 @@ TEST_F(GradingExecutorTest, SimpleSeqScanTest) {
 }
 
 // NOLINTNEXTLINE
-TEST_F(GradingExecutorTest, DISABLED_SimpleIndexScanTest) {
+TEST_F(GradingExecutorTest, SimpleIndexScanTest) {
   // SELECT colA, colB FROM test_1 WHERE colA > 500
 
   // Construct query plan
@@ -199,7 +199,7 @@ TEST_F(GradingExecutorTest, DISABLED_SimpleIndexScanTest) {
 }
 
 // NOLINTNEXTLINE
-TEST_F(GradingExecutorTest, DISABLED_SimpleRawInsertWithIndexTest) {
+TEST_F(GradingExecutorTest, SimpleRawInsertWithIndexTest) {
   // INSERT INTO empty_table2 VALUES (200, 20), (201, 21), (202, 22)
   // Create Values to insert
   std::vector<Value> val1{ValueFactory::GetIntegerValue(200), ValueFactory::GetIntegerValue(20)};
@@ -262,7 +262,7 @@ TEST_F(GradingExecutorTest, DISABLED_SimpleRawInsertWithIndexTest) {
 }
 
 // NOLINTNEXTLINE
-TEST_F(GradingExecutorTest, DISABLED_SimpleSelectInsertTest) {
+TEST_F(GradingExecutorTest, SimpleSelectInsertTest) {
   // INSERT INTO empty_table2 SELECT colA, colB FROM test_1 WHERE colA > 500
   std::unique_ptr<AbstractPlanNode> scan_plan1;
   const Schema *out_schema1;
@@ -335,7 +335,7 @@ TEST_F(GradingExecutorTest, DISABLED_SimpleSelectInsertTest) {
 }
 
 // NOLINTNEXTLINE
-TEST_F(GradingExecutorTest, DISABLED_SimpleUpdateTest) {
+TEST_F(GradingExecutorTest, SimpleUpdateTest) {
   // INSERT INTO empty_table2 SELECT colA, colA FROM test_1 WHERE colA < 50
   // UPDATE empty_table2 SET colA = colA+10 WHERE colA < 50
   std::unique_ptr<AbstractPlanNode> scan_plan1;
@@ -417,7 +417,7 @@ TEST_F(GradingExecutorTest, DISABLED_SimpleUpdateTest) {
 }
 
 // NOLINTNEXTLINE
-TEST_F(GradingExecutorTest, DISABLED_SimpleDeleteTest) {
+TEST_F(GradingExecutorTest, SimpleDeleteTest) {
   // SELECT colA FROM test_1 WHERE colA < 50
   // DELETE FROM test_1 WHERE colA < 50
   // SELECT colA FROM test_1 WHERE colA < 50
@@ -470,7 +470,7 @@ TEST_F(GradingExecutorTest, DISABLED_SimpleDeleteTest) {
 }
 
 // NOLINTNEXTLINE
-TEST_F(GradingExecutorTest, DISABLED_SimpleNestedLoopJoinTest) {
+TEST_F(GradingExecutorTest, SimpleNestedLoopJoinTest) {
   // SELECT test_1.colA, test_1.colB, test_2.col1, test_2.col3 FROM test_1 JOIN test_2 ON test_1.colA = test_2.col1 AND
   // test_1.colA < 50
   std::unique_ptr<AbstractPlanNode> scan_plan1;
@@ -523,7 +523,7 @@ TEST_F(GradingExecutorTest, DISABLED_SimpleNestedLoopJoinTest) {
 }
 
 // NOLINTNEXTLINE
-TEST_F(GradingExecutorTest, DISABLED_SimpleAggregationTest) {
+TEST_F(GradingExecutorTest, SimpleAggregationTest) {
   // SELECT COUNT(colA), SUM(colA), min(colA), max(colA) from test_1;
   std::unique_ptr<AbstractPlanNode> scan_plan;
   const Schema *scan_schema;
@@ -571,7 +571,7 @@ TEST_F(GradingExecutorTest, DISABLED_SimpleAggregationTest) {
 }
 
 // NOLINTNEXTLINE
-TEST_F(GradingExecutorTest, DISABLED_SimpleGroupByAggregation) {
+TEST_F(GradingExecutorTest, SimpleGroupByAggregation) {
   // SELECT count(colA), colB, sum(colC) FROM test_1 Group By colB HAVING count(colA) > 100
   std::unique_ptr<AbstractPlanNode> scan_plan;
   const Schema *scan_schema;
@@ -626,7 +626,7 @@ TEST_F(GradingExecutorTest, DISABLED_SimpleGroupByAggregation) {
 }
 
 // NOLINTNEXTLINE
-TEST_F(GradingExecutorTest, DISABLED_SimpleNestedIndexJoinTest) {
+TEST_F(GradingExecutorTest, SimpleNestedIndexJoinTest) {
   // SELECT test_1.colA, test_1.colB, test_3.col1, test_3.col3 FROM test_1 JOIN test_3 ON test_1.colA = test_3.col1
   std::unique_ptr<AbstractPlanNode> scan_plan1;
   const Schema *outer_schema1;
@@ -692,7 +692,7 @@ TEST_F(GradingExecutorTest, DISABLED_SimpleNestedIndexJoinTest) {
 }
 
 // NOLINTNEXTLINE
-TEST_F(GradingExecutorTest, DISABLED_SchemaChangeSeqScan) {
+TEST_F(GradingExecutorTest, SchemaChangeSeqScan) {
   // INSERT INTO empty_table2 SELECT colA, colB FROM test_1 WHERE colA > 600
   // compare: SELECT colA as outA, colB as outB FROM empty_table2
   std::unique_ptr<AbstractPlanNode> scan_plan1;
@@ -747,7 +747,7 @@ TEST_F(GradingExecutorTest, DISABLED_SchemaChangeSeqScan) {
   }
 }
 
-TEST_F(GradingExecutorTest, DISABLED_IntegratedTest) {
+TEST_F(GradingExecutorTest, IntegratedTest) {
   // scan -> join -> aggregate
   std::unique_ptr<AbstractPlanNode> scan_plan1;
   const Schema *out_schema1;

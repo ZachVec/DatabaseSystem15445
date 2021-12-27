@@ -22,7 +22,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-function run() { echo -e "\n\$ $@"; $@; }
+function run() { echo -e "\$ $@"; $@; }
 
 if [[ $format = true ]]; then
   run make format
