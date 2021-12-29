@@ -23,43 +23,34 @@ to not worry about template, though a more general solution is also welcomed
 */
 
 IndexScanExecutor::IndexScanExecutor(ExecutorContext *exec_ctx, const IndexScanPlanNode *plan)
-    : AbstractExecutor(exec_ctx), plan_(plan), table_(nullptr), table_schema_(nullptr) {}
+    : AbstractExecutor(exec_ctx), plan_(plan), table_(nullptr), key_schema_(nullptr) {}
 
 void IndexScanExecutor::Init() {
   Catalog *catalog = GetExecutorContext()->GetCatalog();
   IndexInfo *index_info = catalog->GetIndex(plan_->GetIndexOid());
 
   // Cast the index to B+ Tree index
-  BPLUSTREE_INDEX_TYPE *index = dynamic_cast<BPLUSTREE_INDEX_TYPE *>(index_info->index_.get());
-  itr_ = index->GetBeginIterator();
-  end_ = index->GetEndIterator();
+  Index *index = index_info->index_.get();
+  key_schema_ = index->GetKeySchema();
+  itr_ = dynamic_cast<BPLUSTREE_INDEX_TYPE *>(index)->GetBeginIterator();
 
   // Get Table and it's schema
-  TableMetadata *table_metadata_ = catalog->GetTable(index_info->table_name_);
-  table_ = table_metadata_->table_.get();
-  table_schema_ = &table_metadata_->schema_;
+  table_ = catalog->GetTable(index_info->table_name_)->table_.get();
 }
 
 bool IndexScanExecutor::Next(Tuple *tuple, RID *rid) {
   BUSTUB_ASSERT(tuple != nullptr, "Tuple have invalid address 'nullptr'!");
   BUSTUB_ASSERT(rid != nullptr, "RID have invalid address 'nullptr'!");
   const AbstractExpression *predicate = plan_->GetPredicate();
-  const Schema *output_schema = GetOutputSchema();
   Transaction *txn = GetExecutorContext()->GetTransaction();
-  Tuple tmp_tuple;
-  while (itr_ != end_ && table_->GetTuple((*itr_).second, &tmp_tuple, txn)) {
-    if (predicate == nullptr || predicate->Evaluate(&tmp_tuple, table_schema_).GetAs<bool>()) {
-      std::vector<Value> values;
-      values.reserve(output_schema->GetColumnCount());
-      for (const auto &col : output_schema->GetColumns()) {
-        values.emplace_back(col.GetExpr()->Evaluate(&tmp_tuple, table_schema_));
-      }
-      *tuple = Tuple(values, output_schema);
+  for (Tuple key; !itr_.isEnd(); ++itr_) {
+    key = Tuple({(*itr_).first.ToValue(key_schema_, 0)}, key_schema_);
+    if (predicate == nullptr || predicate->Evaluate(&key, key_schema_).GetAs<bool>()) {
       *rid = (*itr_).second;
+      BUSTUB_ASSERT(table_->GetTuple(*rid, tuple, txn), "Inconsistence!");
       ++itr_;
       return true;
     }
-    ++itr_;
   }
   return false;
 }

@@ -51,7 +51,7 @@ generation:
   *tuple = Tuple(values, GetOutputSchema());
   *rid = RID();
   return true;
-allocation :
+allocation:
   if (child_executor_->Next(&ltuple, rid)) {
     rtuples.clear();
     const AbstractExpression *lcol = plan_->Predicate()->GetChildAt(0);
