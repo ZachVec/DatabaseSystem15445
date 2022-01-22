@@ -48,7 +48,71 @@ class LockManager {
     std::list<LockRequest> request_queue_;
     std::condition_variable cv_;  // for notifying blocked transactions on this rid
     bool upgrading_ = false;
+    std::mutex latch_;
   };
+
+  bool isTxnInState(Transaction *txn, const TransactionState &state) { return txn->GetState() == state; }
+  bool canLockShared(Transaction *txn, const RID &rid) {
+    if (isTxnInState(txn, TransactionState::ABORTED) || txn->IsSharedLocked(rid)) {
+      return false;
+    }
+    if (txn->GetIsolationLevel() == IsolationLevel::READ_UNCOMMITTED) {
+      txn->SetState(TransactionState::ABORTED);
+      throw TransactionAbortException(txn->GetTransactionId(), AbortReason::LOCKSHARED_ON_READ_UNCOMMITTED);
+    } else if (isTxnInState(txn, TransactionState::SHRINKING)) {
+      txn->SetState(TransactionState::ABORTED);
+      throw TransactionAbortException(txn->GetTransactionId(), AbortReason::LOCK_ON_SHRINKING);
+    }
+    return true;
+  }
+  bool canLockExclusive(Transaction *txn, const RID &rid) {
+    if (isTxnInState(txn, TransactionState::ABORTED) || txn->IsExclusiveLocked(rid)) {
+      return false;
+    }
+    if (isTxnInState(txn, TransactionState::SHRINKING)) {
+      txn->SetState(TransactionState::ABORTED);
+      throw TransactionAbortException(txn->GetTransactionId(), AbortReason::LOCK_ON_SHRINKING);
+    }
+    return true;
+  }
+  bool canUpgradeLock(Transaction *txn, const RID &rid) {
+    BUSTUB_ASSERT(txn->IsSharedLocked(rid), "Txn must hold shared lock when upgrading");
+    if (isTxnInState(txn, TransactionState::ABORTED)) {
+      return false;
+    }
+    if (isTxnInState(txn, TransactionState::SHRINKING)) {
+      txn->SetState(TransactionState::ABORTED);
+      throw TransactionAbortException(txn->GetTransactionId(), AbortReason::LOCK_ON_SHRINKING);
+    }
+    return true;
+  }
+  bool shouldGrantLock(const std::list<LockRequest> &queue, const LockRequest &req) {
+    if (queue.front().txn_id_ == req.txn_id_) {
+      return true;
+    }
+    if (req.lock_mode_ == LockMode::EXCLUSIVE) {
+      return false;
+    }
+    for (const LockRequest &r : queue) {
+      if (r.txn_id_ == req.txn_id_) {
+        return true;
+      }
+      if (r.lock_mode_ == LockMode::EXCLUSIVE) {
+        return false;
+      }
+    }
+    throw std::runtime_error("LockRequest Not In the LockRequestQueue");
+  }
+  bool transitToShrink(Transaction *txn, const RID &rid) {
+    switch (txn->GetIsolationLevel()) {
+    case IsolationLevel::REPEATABLE_READ:
+      return isTxnInState(txn, TransactionState::GROWING);
+    case IsolationLevel::READ_COMMITTED:
+      return txn->IsExclusiveLocked(rid) && isTxnInState(txn, TransactionState::GROWING);;
+    default:
+      return false;
+    }
+  }
 
  public:
   /**
