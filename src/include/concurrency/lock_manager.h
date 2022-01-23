@@ -15,8 +15,10 @@
 #include <algorithm>
 #include <condition_variable>  // NOLINT
 #include <list>
+#include <map>
 #include <memory>
 #include <mutex>  // NOLINT
+#include <set>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -51,41 +53,20 @@ class LockManager {
     std::mutex latch_;
   };
 
-  bool isTxnInState(Transaction *txn, const TransactionState &state) { return txn->GetState() == state; }
-  bool canLockShared(Transaction *txn, const RID &rid) {
-    if (isTxnInState(txn, TransactionState::ABORTED) || txn->IsSharedLocked(rid)) {
-      return false;
-    }
-    if (txn->GetIsolationLevel() == IsolationLevel::READ_UNCOMMITTED) {
+  void AssertNotInLevel(Transaction *txn, const IsolationLevel &level, const AbortReason &reason) {
+    if (txn->GetIsolationLevel() == level) {
       txn->SetState(TransactionState::ABORTED);
-      throw TransactionAbortException(txn->GetTransactionId(), AbortReason::LOCKSHARED_ON_READ_UNCOMMITTED);
-    } else if (isTxnInState(txn, TransactionState::SHRINKING)) {
-      txn->SetState(TransactionState::ABORTED);
-      throw TransactionAbortException(txn->GetTransactionId(), AbortReason::LOCK_ON_SHRINKING);
+      throw TransactionAbortException(txn->GetTransactionId(), reason);
     }
-    return true;
   }
-  bool canLockExclusive(Transaction *txn, const RID &rid) {
-    if (isTxnInState(txn, TransactionState::ABORTED) || txn->IsExclusiveLocked(rid)) {
-      return false;
-    }
-    if (isTxnInState(txn, TransactionState::SHRINKING)) {
+  void AssertNotInState(Transaction *txn, const TransactionState &state, const AbortReason &reason) {
+    if (txn->GetState() == state) {
       txn->SetState(TransactionState::ABORTED);
-      throw TransactionAbortException(txn->GetTransactionId(), AbortReason::LOCK_ON_SHRINKING);
+      throw TransactionAbortException(txn->GetTransactionId(), reason);
     }
-    return true;
   }
-  bool canUpgradeLock(Transaction *txn, const RID &rid) {
-    BUSTUB_ASSERT(txn->IsSharedLocked(rid), "Txn must hold shared lock when upgrading");
-    if (isTxnInState(txn, TransactionState::ABORTED)) {
-      return false;
-    }
-    if (isTxnInState(txn, TransactionState::SHRINKING)) {
-      txn->SetState(TransactionState::ABORTED);
-      throw TransactionAbortException(txn->GetTransactionId(), AbortReason::LOCK_ON_SHRINKING);
-    }
-    return true;
-  }
+  bool isTxnInState(Transaction *txn, const TransactionState &state);
+  bool isTxnInState(const txn_id_t &txn_id, const TransactionState &state);
   bool shouldGrantLock(const std::list<LockRequest> &queue, const LockRequest &req) {
     if (queue.front().txn_id_ == req.txn_id_) {
       return true;
@@ -101,18 +82,23 @@ class LockManager {
         return false;
       }
     }
-    throw std::runtime_error("LockRequest Not In the LockRequestQueue");
+    BUSTUB_ASSERT(false, "LockReqeustQueue must contains LockRequest");
   }
   bool transitToShrink(Transaction *txn, const RID &rid) {
     switch (txn->GetIsolationLevel()) {
-    case IsolationLevel::REPEATABLE_READ:
-      return isTxnInState(txn, TransactionState::GROWING);
-    case IsolationLevel::READ_COMMITTED:
-      return txn->IsExclusiveLocked(rid) && isTxnInState(txn, TransactionState::GROWING);;
-    default:
-      return false;
+      case IsolationLevel::REPEATABLE_READ:
+        return isTxnInState(txn, TransactionState::GROWING);
+      case IsolationLevel::READ_COMMITTED:
+        return txn->IsExclusiveLocked(rid) && isTxnInState(txn, TransactionState::GROWING);
+      default:
+        return false;
     }
   }
+  void buildGraph();
+  void buildGraph(const std::list<LockRequest> &queue);
+  void clearGraph() { waits_for_.clear(); }
+  void clearGraph(const txn_id_t &txn_id);
+  bool hasCycle(std::set<txn_id_t> *visit, std::set<txn_id_t> *route, const txn_id_t &src);
 
  public:
   /**
@@ -203,7 +189,7 @@ class LockManager {
   /** Lock table for lock requests. */
   std::unordered_map<RID, LockRequestQueue> lock_table_;
   /** Waits-for graph representation. */
-  std::unordered_map<txn_id_t, std::vector<txn_id_t>> waits_for_;
+  std::map<txn_id_t, std::set<txn_id_t>> waits_for_;
 };
 
 }  // namespace bustub
