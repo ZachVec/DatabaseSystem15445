@@ -20,8 +20,7 @@ UpdateExecutor::UpdateExecutor(ExecutorContext *exec_ctx, const UpdatePlanNode *
     : AbstractExecutor(exec_ctx), plan_(plan), table_info_(nullptr), child_executor_(std::move(child_executor)) {}
 
 void UpdateExecutor::Init() {
-  Catalog *catalog = GetExecutorContext()->GetCatalog();
-  table_info_ = catalog->GetTable(plan_->TableOid());
+  table_info_ = GetCatalog()->GetTable(plan_->TableOid());
   child_executor_->Init();
 }
 
@@ -29,18 +28,28 @@ bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
   BUSTUB_ASSERT(tuple != nullptr, "Tuple have invalid address 'nullptr'!");
   BUSTUB_ASSERT(rid != nullptr, "RID have invalid address 'nullptr'!");
 
-  auto indexes = GetExecutorContext()->GetCatalog()->GetTableIndexes(table_info_->name_);
-  Transaction *txn = GetExecutorContext()->GetTransaction();
+  Transaction *txn = GetTransaction();
+  Catalog *catalog = GetCatalog();
+  // table staff
   const Schema &table_schema = table_info_->schema_;
+  const table_oid_t &table_id = table_info_->oid_;
+  // index staff
+  const auto &indexes = catalog->GetTableIndexes(table_info_->name_);
+  const auto &index_records = txn->GetIndexWriteSet();
   while (child_executor_->Next(tuple, rid)) {
+    // tryLock(txn, *rid);
     Tuple updated = GenerateUpdatedTuple(*tuple);
     table_info_->table_->UpdateTuple(updated, *rid, txn);
     for (const auto &index_info : indexes) {
-      Index *index = index_info->index_.get();
-      const auto &old_key = tuple->KeyFromTuple(table_schema, *index->GetKeySchema(), index->GetKeyAttrs());
-      const auto &new_key = updated.KeyFromTuple(table_schema, *index->GetKeySchema(), index->GetKeyAttrs());
-      index->DeleteEntry(old_key, *rid, txn);
-      index->InsertEntry(new_key, *rid, txn);
+      const index_oid_t &index_id = index_info->index_oid_;
+      const Schema *key_schema = index_info->index_->GetKeySchema();
+      const auto &key_attrs = index_info->index_->GetKeyAttrs();
+      const auto &old_key = tuple->KeyFromTuple(table_schema, *key_schema, key_attrs);
+      const auto &new_key = updated.KeyFromTuple(table_schema, *key_schema, key_attrs);
+      index_info->index_->DeleteEntry(old_key, *rid, txn);
+      index_info->index_->InsertEntry(new_key, *rid, txn);
+      index_records->emplace_back(*rid, table_id, WType::UPDATE, updated, index_id, catalog);
+      index_records->back().old_tuple_ = *tuple;
     }
   }
   return false;

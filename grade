@@ -32,18 +32,18 @@ fi
 
 case $project in
   5)
-    run make rollback_test
-    run make grading_transaction_test
-    run make grading_lock_manager_detection_test
     run make grading_lock_manager_1_test
     run make grading_lock_manager_2_test
     run make grading_lock_manager_3_test
-    run ./test/rollback_test
-    run ./test/grading_transaction_test
-    run ./test/grading_lock_manager_detection_test
+    run make grading_lock_manager_detection_test
+    run make grading_rollback_test
+    run make grading_transaction_test
     run ./test/grading_lock_manager_1_test
     run ./test/grading_lock_manager_2_test
     run ./test/grading_lock_manager_3_test
+    run ./test/grading_lock_manager_detection_test
+    run ./test/grading_rollback_test
+    run ./test/grading_transaction_test
   ;&
   4)
     run make grading_catalog_test

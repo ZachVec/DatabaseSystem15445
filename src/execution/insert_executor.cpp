@@ -21,21 +21,11 @@ necessary during execution.
 
 InsertExecutor::InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *plan,
                                std::unique_ptr<AbstractExecutor> &&child_executor)
-    : AbstractExecutor(exec_ctx),
-      plan_(plan),
-      child_executor_(std::move(child_executor)),
-      table_(nullptr),
-      table_schema_(nullptr) {}
+    : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)) {}
 
 void InsertExecutor::Init() {
-  Catalog *catalog = GetExecutorContext()->GetCatalog();
-  TableMetadata *table_metadata = catalog->GetTable(plan_->TableOid());
-  table_ = table_metadata->table_.get();
-  table_schema_ = &table_metadata->schema_;
-  const auto &index_infos = catalog->GetTableIndexes(table_metadata->name_);
-  indexes.reserve(index_infos.size());
-  for (const auto &index_info : index_infos) {
-    indexes.emplace_back(index_info->index_.get());
+  if (!plan_->IsRawInsert()) {
+    child_executor_->Init();
   }
 }
 
@@ -43,28 +33,62 @@ bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
   BUSTUB_ASSERT(tuple != nullptr, "Tuple have invalid address 'nullptr'!");
   BUSTUB_ASSERT(rid != nullptr, "RID have invalid address 'nullptr'!");
 
-  Transaction *txn = GetExecutorContext()->GetTransaction();
   if (plan_->IsRawInsert()) {
-    auto &raw_values = plan_->RawValues();
-    for (const auto &raw_value : raw_values) {
-      InsertAndUpdateIndexes(Tuple(raw_value, table_schema_), rid, txn);
-    }
+    RawInsert(rid);
   } else {
-    child_executor_->Init();
-    while (child_executor_->Next(tuple, rid)) {
-      InsertAndUpdateIndexes(*tuple, rid, txn);
-    }
+    NonRawInsert(tuple, rid);
   }
   return false;
 }
 
-void InsertExecutor::InsertAndUpdateIndexes(Tuple tuple, RID *rid, Transaction *txn) {
-  if (!table_->InsertTuple(tuple, rid, txn)) {
-    throw Exception(ExceptionType::OUT_OF_MEMORY, "Out Of Memory!");
-  }
-  for (Index *index : indexes) {
-    const Tuple &key = tuple.KeyFromTuple(*table_schema_, *index->GetKeySchema(), index->GetKeyAttrs());
-    index->InsertEntry(key, *rid, txn);
+void InsertExecutor::RawInsert(RID *rid) {
+  Transaction *txn = GetTransaction();
+  Catalog *catalog = GetCatalog();
+  const auto &raw_tuples = plan_->RawValues();
+  const TableMetadata *metadata = catalog->GetTable(plan_->TableOid());
+  // table staff
+  const Schema *table_schema = &metadata->schema_;
+  const table_oid_t &table_id = metadata->oid_;
+  // index staff
+  const auto &index_infos = catalog->GetTableIndexes(metadata->name_);
+  const auto &index_records = txn->GetIndexWriteSet();
+
+  for (const std::vector<Value> &raw_tuple : raw_tuples) {
+    Tuple inserted(raw_tuple, table_schema);
+    metadata->table_->InsertTuple(inserted, rid, txn);
+    for (const auto &index_info : index_infos) {
+      const index_oid_t &index_id = index_info->index_oid_;
+      const Schema *key_schema = index_info->index_->GetKeySchema();
+      const auto &key_attrs = index_info->index_->GetKeyAttrs();
+      const Tuple &key = inserted.KeyFromTuple(*table_schema, *key_schema, key_attrs);
+      index_info->index_->InsertEntry(key, *rid, txn);
+      txn->GetIndexWriteSet()->emplace_back(*rid, table_id, WType::INSERT, inserted, index_id, catalog);
+    }
   }
 }
+
+void InsertExecutor::NonRawInsert(Tuple *tuple, RID *rid) {
+  Transaction *txn = GetTransaction();
+  Catalog *catalog = GetCatalog();
+  const TableMetadata *table_info = catalog->GetTable(plan_->TableOid());
+  // table staff
+  const Schema *table_schema = &table_info->schema_;
+  const table_oid_t &table_id = table_info->oid_;
+  // index staff
+  const auto &index_infos = catalog->GetTableIndexes(table_info->name_);
+  const auto &index_records = txn->GetIndexWriteSet();
+
+  while (child_executor_->Next(tuple, rid)) {
+    table_info->table_->InsertTuple(*tuple, rid, txn);
+    for (const auto &index_info : index_infos) {
+      const index_oid_t &index_id = index_info->index_oid_;
+      const Schema *key_schema = index_info->index_->GetKeySchema();
+      const auto &key_attrs = index_info->index_->GetKeyAttrs();
+      const Tuple &key = tuple->KeyFromTuple(*table_schema, *key_schema, key_attrs);
+      index_info->index_->InsertEntry(key, *rid, txn);
+      index_records->emplace_back(*rid, table_id, WType::INSERT, *tuple, index_id, catalog);
+    }
+  }
+}
+
 }  // namespace bustub

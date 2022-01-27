@@ -27,6 +27,19 @@ namespace bustub {
  * Deleted tuple info come from a child executor.
  */
 class DeleteExecutor : public AbstractExecutor {
+  Catalog *GetCatalog() { return GetExecutorContext()->GetCatalog(); }
+  Transaction *GetTransaction() { return GetExecutorContext()->GetTransaction(); }
+  LockManager *GetLockManager() { return GetExecutorContext()->GetLockManager(); }
+  bool tryLock(Transaction *txn, const RID &rid) {
+    if (txn->IsSharedLocked(rid)) {
+      return GetLockManager()->LockUpgrade(txn, rid);
+    }
+    if (txn->IsExclusiveLocked(rid)) {
+      return true;
+    }
+    return GetLockManager()->LockExclusive(txn, rid);
+  }
+  
  public:
   /**
    * Creates a new delete executor.
@@ -49,8 +62,6 @@ class DeleteExecutor : public AbstractExecutor {
  private:
   /** The delete plan node to be executed. */
   const DeletePlanNode *plan_;
-  /** Metadata identifying the table that should be deleted. */
-  const TableMetadata *table_info_;
   /** The child executor to obtain rid from. */
   std::unique_ptr<AbstractExecutor> child_executor_;
 };

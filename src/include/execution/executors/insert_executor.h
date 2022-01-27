@@ -27,6 +27,12 @@ namespace bustub {
  * Inserted values can either be embedded in the plan itself ("raw insert") or come from a child executor.
  */
 class InsertExecutor : public AbstractExecutor {
+  /** Helper function */
+  Catalog *GetCatalog() { return GetExecutorContext()->GetCatalog(); }
+  Transaction *GetTransaction() { return GetExecutorContext()->GetTransaction(); }
+  LockManager *GetLockManager() { return GetExecutorContext()->GetLockManager(); }
+  void RawInsert(RID *rid);
+  void NonRawInsert(Tuple *tuple, RID *rid);
  public:
   /**
    * Creates a new insert executor.
@@ -46,13 +52,8 @@ class InsertExecutor : public AbstractExecutor {
   bool Next([[maybe_unused]] Tuple *tuple, RID *rid) override;
 
  private:
-  /** Helper function */
-  void InsertAndUpdateIndexes(Tuple tuple, RID *rid, Transaction *txn);
   /** The insert plan node to be executed. */
   const InsertPlanNode *plan_;
   std::unique_ptr<AbstractExecutor> child_executor_;
-  TableHeap *table_;
-  Schema *table_schema_;
-  std::vector<Index *> indexes;
 };
 }  // namespace bustub

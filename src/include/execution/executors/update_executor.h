@@ -30,6 +30,18 @@ namespace bustub {
  */
 class UpdateExecutor : public AbstractExecutor {
   friend class UpdatePlanNode;
+  Catalog *GetCatalog() { return GetExecutorContext()->GetCatalog(); }
+  Transaction *GetTransaction() { return GetExecutorContext()->GetTransaction(); }
+  LockManager *GetLockManager() { return GetExecutorContext()->GetLockManager(); }
+  bool tryLock(Transaction *txn, const RID &rid) {
+    if (txn->IsSharedLocked(rid)) {
+      return GetLockManager()->LockUpgrade(txn, rid);
+    }
+    if (txn->IsExclusiveLocked(rid)) {
+      return true;
+    }
+    return GetLockManager()->LockExclusive(txn, rid);
+  }
 
  public:
   /**

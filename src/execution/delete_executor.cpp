@@ -17,30 +17,34 @@ namespace bustub {
 
 DeleteExecutor::DeleteExecutor(ExecutorContext *exec_ctx, const DeletePlanNode *plan,
                                std::unique_ptr<AbstractExecutor> &&child_executor)
-    : AbstractExecutor(exec_ctx), plan_(plan), table_info_(nullptr), child_executor_(std::move(child_executor)) {}
+    : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)) {}
 
-void DeleteExecutor::Init() {
-  Catalog *catalog = GetExecutorContext()->GetCatalog();
-  table_info_ = catalog->GetTable(plan_->TableOid());
-  child_executor_->Init();
-}
+void DeleteExecutor::Init() { child_executor_->Init(); }
 
 bool DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
   BUSTUB_ASSERT(tuple != nullptr, "Tuple have invalid address 'nullptr'!");
   BUSTUB_ASSERT(rid != nullptr, "RID have invalid address 'nullptr'!");
 
-  // lookup table schema and indexes need deleted
-  Transaction *txn = GetExecutorContext()->GetTransaction();
-  TableHeap *table = table_info_->table_.get();
-  const Schema &schema = table_info_->schema_;
-  const auto &indexes = GetExecutorContext()->GetCatalog()->GetTableIndexes(table_info_->name_);
+  Transaction *txn = GetTransaction();
+  Catalog *catalog = GetCatalog();
+  TableMetadata *table_info = catalog->GetTable(plan_->TableOid());
+  // table staff
+  const Schema &table_schema = table_info->schema_;
+  const table_oid_t &table_id = table_info->oid_;
+  // index staff
+  const auto &index_infos = catalog->GetTableIndexes(table_info->name_);
+  const auto &index_records = txn->GetIndexWriteSet();
   // Start deleting
   while (child_executor_->Next(tuple, rid)) {
-    table->MarkDelete(*rid, txn);
-    for (const auto &index_info : indexes) {
-      Index *index = index_info->index_.get();
-      const auto &deleted_key = tuple->KeyFromTuple(schema, *index->GetKeySchema(), index->GetKeyAttrs());
-      index->DeleteEntry(deleted_key, *rid, txn);
+    // tryLock(txn, *rid);
+    table_info->table_->MarkDelete(*rid, txn);
+    for (const auto &index_info : index_infos) {
+      const index_oid_t &index_id = index_info->index_oid_;
+      const Schema *key_schema = index_info->index_->GetKeySchema();
+      const auto &key_attrs = index_info->index_->GetKeyAttrs();
+      const Tuple &key = tuple->KeyFromTuple(table_schema, *key_schema, key_attrs);
+      index_info->index_->DeleteEntry(key, *rid, txn);
+      index_records->emplace_back(*rid, table_id, WType::DELETE, *tuple, index_id, catalog);
     }
   }
   return false;
