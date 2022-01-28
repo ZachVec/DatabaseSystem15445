@@ -110,7 +110,7 @@ bool LockManager::LockUpgrade(Transaction *txn, const RID &rid) {
 
   /** 2. clear former request and insert new request */
   queue.remove_if([&txn_id](const LockRequest &r) { return r.txn_id_ == txn_id; });
-  auto it = std::find_if_not(queue.begin(), queue.end(), [](const LockRequest &req) { return !req.granted_; });
+  auto it = std::find_if_not(queue.begin(), queue.end(), [](const LockRequest &req) { return req.granted_; });
   LockRequest &req = *queue.emplace(it, txn_id, LockMode::EXCLUSIVE);
 
   /** 3. Check to see if it's time to upgrade */

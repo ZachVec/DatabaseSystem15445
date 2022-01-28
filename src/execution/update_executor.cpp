@@ -37,7 +37,7 @@ bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
   const auto &indexes = catalog->GetTableIndexes(table_info_->name_);
   const auto &index_records = txn->GetIndexWriteSet();
   while (child_executor_->Next(tuple, rid)) {
-    // tryLock(txn, *rid);
+    Lock(*rid);
     Tuple updated = GenerateUpdatedTuple(*tuple);
     table_info_->table_->UpdateTuple(updated, *rid, txn);
     for (const auto &index_info : indexes) {

@@ -26,31 +26,36 @@ Hint: The ouput of sequential scan should be a value copy of matched tuple and i
 SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNode *plan)
     : AbstractExecutor(exec_ctx),
       plan_(plan),
+      table_metadata_(GetCatalog()->GetTable(plan->GetTableOid())),
+      predicate_(plan->GetPredicate()),
       itr_(nullptr, RID(), nullptr),
       end_(nullptr, RID(), nullptr),
-      iterator_init_(false) {}
+      start_(false) {}
 
-void SeqScanExecutor::Init() {
-  TableHeap *table = GetCatalog()->GetTable(plan_->GetTableOid())->table_.get();
-  itr_ = table->Begin(GetTransaction());
-  end_ = table->End();
-}
+void SeqScanExecutor::Init() { start_ = true; }
 
 bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
   BUSTUB_ASSERT(tuple != nullptr, "Tuple have invalid address 'nullptr'!");
   BUSTUB_ASSERT(rid != nullptr, "RID have invalid address 'nullptr'!");
-  const AbstractExpression *predicate = plan_->GetPredicate();
   const Schema *output_schema = GetOutputSchema();
-  const Schema *table_schema = &GetCatalog()->GetTable(plan_->GetTableOid())->schema_;
-  while (itr_ != end_) {
-    // if query has predicate, and predicate is true for this tuple, then materialize
-    if (isTrue(predicate, &(*itr_), table_schema)) {
-      *tuple = OutputFromTuple(&(*itr_), output_schema, table_schema);
+  const Schema *table_schema = GetTableSchema();
+  if (start_) {
+    itr_ = table_metadata_->table_->Begin(GetTransaction());
+    end_ = table_metadata_->table_->End();
+    start_ = false;
+  } else {
+    ++itr_;
+  }
+
+  for (; itr_ != end_; ++itr_) {
+    Lock(itr_->GetRid());
+    if (predicateTrue(*itr_, table_schema)) {
+      *tuple = OutputFromTuple(*itr_, table_schema, output_schema);
       *rid = itr_->GetRid();
-      ++itr_;
+      Unlock(itr_->GetRid());
       return true;
     }
-    ++itr_;
+    Unlock(itr_->GetRid());
   }
   return false;
 }

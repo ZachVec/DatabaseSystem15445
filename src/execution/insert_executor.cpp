@@ -56,13 +56,14 @@ void InsertExecutor::RawInsert(RID *rid) {
   for (const std::vector<Value> &raw_tuple : raw_tuples) {
     Tuple inserted(raw_tuple, table_schema);
     metadata->table_->InsertTuple(inserted, rid, txn);
+    Lock(*rid);
     for (const auto &index_info : index_infos) {
       const index_oid_t &index_id = index_info->index_oid_;
       const Schema *key_schema = index_info->index_->GetKeySchema();
       const auto &key_attrs = index_info->index_->GetKeyAttrs();
       const Tuple &key = inserted.KeyFromTuple(*table_schema, *key_schema, key_attrs);
       index_info->index_->InsertEntry(key, *rid, txn);
-      txn->GetIndexWriteSet()->emplace_back(*rid, table_id, WType::INSERT, inserted, index_id, catalog);
+      index_records->emplace_back(*rid, table_id, WType::INSERT, inserted, index_id, catalog);
     }
   }
 }
@@ -80,6 +81,7 @@ void InsertExecutor::NonRawInsert(Tuple *tuple, RID *rid) {
 
   while (child_executor_->Next(tuple, rid)) {
     table_info->table_->InsertTuple(*tuple, rid, txn);
+    Lock(*rid);
     for (const auto &index_info : index_infos) {
       const index_oid_t &index_id = index_info->index_oid_;
       const Schema *key_schema = index_info->index_->GetKeySchema();

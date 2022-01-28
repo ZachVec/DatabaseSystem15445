@@ -33,6 +33,8 @@ class InsertExecutor : public AbstractExecutor {
   LockManager *GetLockManager() { return GetExecutorContext()->GetLockManager(); }
   void RawInsert(RID *rid);
   void NonRawInsert(Tuple *tuple, RID *rid);
+  bool Lock(const RID &rid) { return GetLockManager()->LockExclusive(GetTransaction(), rid); }
+
  public:
   /**
    * Creates a new insert executor.

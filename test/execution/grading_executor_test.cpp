@@ -56,7 +56,8 @@ class GradingExecutorTest : public ::testing::Test {
     catalog_ = std::make_unique<Catalog>(bpm_.get(), lock_manager_.get(), log_manager_.get());
     // Begin a new transaction, along with its executor context.
     txn_ = txn_mgr_->Begin();
-    exec_ctx_ = std::make_unique<ExecutorContext>(txn_, catalog_.get(), bpm_.get(), txn_mgr_.get(), lock_manager_.get());
+    exec_ctx_ =
+        std::make_unique<ExecutorContext>(txn_, catalog_.get(), bpm_.get(), txn_mgr_.get(), lock_manager_.get());
     // Generate some test tables.
     TableGenerator gen{exec_ctx_.get()};
     gen.GenerateTestTables();
@@ -388,6 +389,7 @@ TEST_F(GradingExecutorTest, SimpleUpdateTest) {
 
   std::vector<Tuple> result_set2;
   GetExecutionEngine()->Execute(scan_plan2.get(), &result_set2, GetTxn(), GetExecutorContext());
+  GetTxnManager()->Commit(GetTxn());  // release the locks
 
   auto txn = GetTxnManager()->Begin();
   auto exec_ctx = std::make_unique<ExecutorContext>(txn, GetCatalog(), GetBPM(), GetTxnManager(), GetLockManager());
@@ -442,6 +444,7 @@ TEST_F(GradingExecutorTest, SimpleDeleteTest) {
   // Execute
   std::vector<Tuple> result_set;
   GetExecutionEngine()->Execute(scan_plan1.get(), &result_set, GetTxn(), GetExecutorContext());
+  GetTxnManager()->Commit(GetTxn());  // release the locks
 
   // Verify
   for (const auto &tuple : result_set) {

@@ -25,38 +25,44 @@ namespace bustub {
  * SeqScanExecutor executes a sequential scan over a table.
  */
 class SeqScanExecutor : public AbstractExecutor {
-  bool tryLock(Transaction *txn, const RID &rid) {
-    if (txn->GetIsolationLevel() != IsolationLevel::READ_UNCOMMITTED) {
-      return GetLockManager()->LockShared(txn, rid);
-    }
-    return true;
+  /** Helper Functions */
+  Catalog *GetCatalog() { return GetExecutorContext()->GetCatalog(); }
+  Transaction *GetTransaction() { return GetExecutorContext()->GetTransaction(); }
+  LockManager *GetLockManager() { return GetExecutorContext()->GetLockManager(); }
+  const Schema *GetTableSchema() { return &table_metadata_->schema_; }
+  bool predicateTrue(const Tuple &tuple, const Schema *schema) {
+    return predicate_ == nullptr || predicate_->Evaluate(&tuple, schema).GetAs<bool>();
   }
-  bool tryUnlock(Transaction *txn, const RID &rid) {
+  Tuple OutputFromTuple(const Tuple &tuple, const Schema *table, const Schema *output) {
+    std::vector<Value> values;
+    values.reserve(output->GetColumnCount());
+    for (const auto &col : output->GetColumns()) {
+      values.emplace_back(col.GetExpr()->Evaluate(&tuple, table));
+    }
+    return Tuple(values, output);
+  }
+  bool Lock(const RID &rid) {
+    LockManager *lmgr = GetLockManager();
+    Transaction *txn = GetTransaction();
+    if (txn->IsExclusiveLocked(rid) || txn->IsSharedLocked(rid)) {
+      return true;
+    }
     switch (txn->GetIsolationLevel()) {
       case IsolationLevel::REPEATABLE_READ:
+      case IsolationLevel::READ_COMMITTED:
+        return lmgr->LockShared(txn, rid);
+      default:
         return true;
+    }
+  }
+  bool Unlock(const RID &rid) {
+    Transaction *txn = GetTransaction();
+    switch (txn->GetIsolationLevel()) {
       case IsolationLevel::READ_COMMITTED:
         return GetLockManager()->Unlock(txn, rid);
       default:
         return true;
     }
-  }
-  Catalog *GetCatalog() { return GetExecutorContext()->GetCatalog(); }
-  Transaction *GetTransaction() { return GetExecutorContext()->GetTransaction(); }
-  LockManager *GetLockManager() { return GetExecutorContext()->GetLockManager(); }
-  bool isTrue(const AbstractExpression *predicate, const Tuple *tuple, const Schema *schema) {
-    if (predicate == nullptr) {
-      return true;
-    }
-    return predicate->Evaluate(tuple, schema).GetAs<bool>();
-  }
-  Tuple OutputFromTuple(const Tuple *tuple, const Schema *output, const Schema *table) {
-    std::vector<Value> values;
-    values.reserve(output->GetColumnCount());
-    for (const auto &col : output->GetColumns()) {
-      values.emplace_back(col.GetExpr()->Evaluate(tuple, table));
-    }
-    return Tuple(values, output);
   }
 
  public:
@@ -75,9 +81,11 @@ class SeqScanExecutor : public AbstractExecutor {
 
  private:
   /** The sequential scan plan node to be executed. */
-  const SeqScanPlanNode *plan_;  // query plan
-  TableIterator itr_;            // itr iterator
-  TableIterator end_;            // end iterator
-  bool iterator_init_;
+  const SeqScanPlanNode *plan_;          // query plan
+  TableMetadata *table_metadata_;        // table metadata
+  const AbstractExpression *predicate_;  // predicate
+  TableIterator itr_;                    // itr iterator
+  TableIterator end_;                    // end iterator
+  bool start_;
 };
 }  // namespace bustub

@@ -33,7 +33,8 @@ class UpdateExecutor : public AbstractExecutor {
   Catalog *GetCatalog() { return GetExecutorContext()->GetCatalog(); }
   Transaction *GetTransaction() { return GetExecutorContext()->GetTransaction(); }
   LockManager *GetLockManager() { return GetExecutorContext()->GetLockManager(); }
-  bool tryLock(Transaction *txn, const RID &rid) {
+  bool Lock(const RID &rid) {
+    Transaction *txn = GetTransaction();
     if (txn->IsSharedLocked(rid)) {
       return GetLockManager()->LockUpgrade(txn, rid);
     }

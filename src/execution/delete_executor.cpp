@@ -36,7 +36,7 @@ bool DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
   const auto &index_records = txn->GetIndexWriteSet();
   // Start deleting
   while (child_executor_->Next(tuple, rid)) {
-    // tryLock(txn, *rid);
+    Lock(*rid);
     table_info->table_->MarkDelete(*rid, txn);
     for (const auto &index_info : index_infos) {
       const index_oid_t &index_id = index_info->index_oid_;
